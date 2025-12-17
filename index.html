@@ -15,21 +15,6 @@
       background: #000;
     }
 
-    #enterAR {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 14px 24px;
-      font-size: 16px;
-      border-radius: 30px;
-      border: none;
-      background: #00c853;
-      color: #fff;
-      font-weight: bold;
-      z-index: 10;
-    }
-
     #hint {
       position: fixed;
       bottom: 20px;
@@ -40,30 +25,32 @@
       padding: 10px 16px;
       border-radius: 20px;
       font-size: 14px;
-      display: none;
       z-index: 10;
+      display: none;
     }
   </style>
 </head>
 
 <body>
 
-  <button id="enterAR">Start AR</button>
   <div id="hint">Tap on floor or table to place video</div>
 
   <a-scene
-    webxr="requiredFeatures: hit-test;"
+    webxr="requiredFeatures: hit-test; referenceSpaceType: local-floor"
+    xr-mode-ui="enabled: true"
     vr-mode-ui="enabled: false"
     embedded
   >
 
     <a-camera position="0 1.6 0"></a-camera>
 
+    <!-- Video container -->
     <a-entity id="videoHolder" visible="false">
       <a-video
         src="#arVideo"
         width="1"
         height="0.6"
+        rotation="0 0 0"
         autoplay
         loop
         muted
@@ -71,6 +58,7 @@
       </a-video>
     </a-entity>
 
+    <!-- Assets -->
     <a-assets>
       <video
         id="arVideo"
@@ -87,13 +75,10 @@
 
   <script>
     const scene = document.querySelector('a-scene');
-    const enterAR = document.getElementById('enterAR');
     const hint = document.getElementById('hint');
     const videoHolder = document.getElementById('videoHolder');
 
-    enterAR.addEventListener('click', async () => {
-      await scene.enterVR(); // REQUIRED
-      enterAR.style.display = 'none';
+    scene.addEventListener('enter-vr', () => {
       hint.style.display = 'block';
     });
 
@@ -101,7 +86,7 @@
       const xrSession = scene.renderer.xr.getSession();
       if (!xrSession) return;
 
-      const referenceSpace = await xrSession.requestReferenceSpace('local');
+      const referenceSpace = await xrSession.requestReferenceSpace('local-floor');
       const viewerSpace = await xrSession.requestReferenceSpace('viewer');
       const hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
