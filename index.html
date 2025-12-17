@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>QR Markerless Video AR</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- A-Frame -->
@@ -16,6 +15,21 @@
       background: #000;
     }
 
+    #enterAR {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 14px 24px;
+      font-size: 16px;
+      border-radius: 30px;
+      border: none;
+      background: #00c853;
+      color: #fff;
+      font-weight: bold;
+      z-index: 10;
+    }
+
     #hint {
       position: fixed;
       bottom: 20px;
@@ -26,6 +40,7 @@
       padding: 10px 16px;
       border-radius: 20px;
       font-size: 14px;
+      display: none;
       z-index: 10;
     }
   </style>
@@ -33,37 +48,29 @@
 
 <body>
 
+  <button id="enterAR">Start AR</button>
   <div id="hint">Tap on floor or table to place video</div>
 
   <a-scene
     webxr="requiredFeatures: hit-test;"
     vr-mode-ui="enabled: false"
-    renderer="colorManagement: true;"
     embedded
   >
 
-    <!-- Camera -->
     <a-camera position="0 1.6 0"></a-camera>
 
-    <!-- Video Entity (Hidden initially) -->
-    <a-entity
-      id="videoHolder"
-      visible="false"
-    >
+    <a-entity id="videoHolder" visible="false">
       <a-video
         src="#arVideo"
         width="1"
         height="0.6"
-        position="0 0 0"
-        rotation="0 0 0"
         autoplay
         loop
         muted
-        playsinline
-      ></a-video>
+        playsinline>
+      </a-video>
     </a-entity>
 
-    <!-- Assets -->
     <a-assets>
       <video
         id="arVideo"
@@ -80,8 +87,15 @@
 
   <script>
     const scene = document.querySelector('a-scene');
-    const videoHolder = document.getElementById('videoHolder');
+    const enterAR = document.getElementById('enterAR');
     const hint = document.getElementById('hint');
+    const videoHolder = document.getElementById('videoHolder');
+
+    enterAR.addEventListener('click', async () => {
+      await scene.enterVR(); // REQUIRED
+      enterAR.style.display = 'none';
+      hint.style.display = 'block';
+    });
 
     scene.addEventListener('click', async () => {
       const xrSession = scene.renderer.xr.getSession();
@@ -92,18 +106,11 @@
       const hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
       xrSession.requestAnimationFrame((time, frame) => {
-        const hitTestResults = frame.getHitTestResults(hitTestSource);
-        if (hitTestResults.length > 0) {
-          const hit = hitTestResults[0];
-          const pose = hit.getPose(referenceSpace);
-
-          videoHolder.setAttribute('position', {
-            x: pose.transform.position.x,
-            y: pose.transform.position.y,
-            z: pose.transform.position.z
-          });
-
-          videoHolder.setAttribute('visible', 'true');
+        const hits = frame.getHitTestResults(hitTestSource);
+        if (hits.length > 0) {
+          const pose = hits[0].getPose(referenceSpace);
+          videoHolder.setAttribute('position', pose.transform.position);
+          videoHolder.setAttribute('visible', true);
           hint.style.display = 'none';
         }
       });
