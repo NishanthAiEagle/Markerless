@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Markerless Video AR</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="hint">Tap on floor or table to place video</div>
+
+  <a-scene
+    webxr="requiredFeatures: hit-test;"
+    vr-mode-ui="enabled: false"
+    renderer="colorManagement: true;"
+    embedded
+  >
+
+    <!-- Camera -->
+    <a-camera position="0 1.6 0"></a-camera>
+
+    <!-- Video Entity (Hidden initially) -->
+    <a-entity
+      id="videoHolder"
+      visible="false"
+    >
+      <a-video
+        src="#arVideo"
+        width="1"
+        height="0.6"
+        position="0 0 0"
+        rotation="0 0 0"
+        autoplay
+        loop
+        muted
+        playsinline
+      ></a-video>
+    </a-entity>
+
+    <!-- Assets -->
+    <a-assets>
+      <video
+        id="arVideo"
+        src="assets/demo-video.mp4"
+        preload="auto"
+        loop
+        muted
+        playsinline
+        webkit-playsinline>
+      </video>
+    </a-assets>
+
+  </a-scene>
+
+  <script>
+    const scene = document.querySelector('a-scene');
+    const videoHolder = document.getElementById('videoHolder');
+    const hint = document.getElementById('hint');
+
+    scene.addEventListener('click', async () => {
+      const xrSession = scene.renderer.xr.getSession();
+      if (!xrSession) return;
+
+      const referenceSpace = await xrSession.requestReferenceSpace('local');
+      const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+      const hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+
+      xrSession.requestAnimationFrame((time, frame) => {
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+        if (hitTestResults.length > 0) {
+          const hit = hitTestResults[0];
+          const pose = hit.getPose(referenceSpace);
+
+          videoHolder.setAttribute('position', {
+            x: pose.transform.position.x,
+            y: pose.transform.position.y,
+            z: pose.transform.position.z
+          });
+
+          videoHolder.setAttribute('visible', 'true');
+          hint.style.display = 'none';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
